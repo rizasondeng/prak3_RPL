@@ -41,6 +41,16 @@ class BukuController:
             messagebox.showwarning("Peringatan", "Semua kolom form harus diisi!")
             return
 
+        # Cek koneksi ke database sebelum simpan
+        if self.model.conn is None:
+            self.model.conn = self.model.db.get_connection()
+            if self.model.conn is None:
+                messagebox.showerror(
+                    "Koneksi Database Gagal",
+                    "Tidak dapat terhubung ke database MySQL.\n\nPastikan MySQL di Laragon/XAMPP sudah dinyalakan (klik Start All)!"
+                )
+                return
+
         # Mengirim data ke Model untuk disimpan
         berhasil = self.model.create_buku(judul, penulis, tahun)
 
@@ -53,7 +63,7 @@ class BukuController:
             # Muat ulang tabel agar data terbaru muncul
             self.muat_data_tabel()
         else:
-            messagebox.showerror("Error", "Terjadi kesalahan saat menyimpan data.")
+            messagebox.showerror("Error", "Terjadi kesalahan saat menyimpan data ke database.")
 
     # Fungsi untuk menyalakan aplikasi
     def run(self):
