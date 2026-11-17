@@ -1,72 +1,58 @@
 import tkinter.messagebox as messagebox
-try:
-    from models.buku_model import BukuModel
-except ImportError:
-    from models.buku_models import BukuModel
+from models.buku_model import BukuModel
 from views.buku_view import BukuView
 
 
 class BukuController:
-    def __init__(self):
-        # Inisialisasi Model dan View
+    def __init__(self, user_role="anggota"):
+        self.user_role = user_role
         self.model = BukuModel()
         self.view = BukuView()
 
-        # Binding (mengikat) tombol di View dengan fungsi di Controller
+        # Menampilkan informasi role pada judul jendela aplikasi
+        self.view.title(f"Sistem Manajemen Perpustakaan - Mode: {self.user_role.upper()}")
+
+        # Binding tombol simpan
         self.view.btn_simpan.configure(command=self.simpan_data)
 
-        # Memuat data ke tabel saat aplikasi pertama kali dibuka
+        # OTORISASI: Jika bukan admin, nonaktifkan form input dan tombol simpan
+        if self.user_role != "admin":
+            self.view.btn_simpan.configure(state="disabled", text="Akses Terkunci (Khusus Admin)")
+            self.view.entry_judul.configure(state="disabled")
+            self.view.entry_penulis.configure(state="disabled")
+            self.view.entry_tahun.configure(state="disabled")
+
         self.muat_data_tabel()
 
     def muat_data_tabel(self):
-        # Mengosongkan isi tabel di View terlebih dahulu
         for item in self.view.tabel.get_children():
             self.view.tabel.delete(item)
-
-        # Mengambil data dari Model (database)
         data_buku = self.model.get_all_buku()
-
-        # Memasukkan data baru ke dalam tabel View
         for buku in data_buku:
             self.view.tabel.insert("", "end", values=(buku['id_buku'], buku['judul'], buku['penulis'], buku['tahun_terbit']))
 
     def simpan_data(self):
-        # Mengambil teks dari kotak input di View
+        # Proteksi ganda di level Controller
+        if self.user_role != "admin":
+            messagebox.showerror("Akses Ditolak", "Anda tidak memiliki izin untuk menambah data!")
+            return
+
         judul = self.view.entry_judul.get()
         penulis = self.view.entry_penulis.get()
         tahun = self.view.entry_tahun.get()
 
-        # Validasi Form Kosong
         if not judul or not penulis or not tahun:
             messagebox.showwarning("Peringatan", "Semua kolom form harus diisi!")
             return
 
-        # Cek koneksi ke database sebelum simpan
-        if self.model.conn is None:
-            self.model.conn = self.model.db.get_connection()
-            if self.model.conn is None:
-                messagebox.showerror(
-                    "Koneksi Database Gagal",
-                    "Tidak dapat terhubung ke database MySQL.\n\nPastikan MySQL di Laragon/XAMPP sudah dinyalakan (klik Start All)!"
-                )
-                return
-
-        # Mengirim data ke Model untuk disimpan
-        berhasil = self.model.create_buku(judul, penulis, tahun)
-
-        if berhasil:
+        if self.model.create_buku(judul, penulis, tahun):
             messagebox.showinfo("Sukses", "Data buku berhasil disimpan!")
-            # Bersihkan form input
             self.view.entry_judul.delete(0, 'end')
             self.view.entry_penulis.delete(0, 'end')
             self.view.entry_tahun.delete(0, 'end')
-            # Muat ulang tabel agar data terbaru muncul
             self.muat_data_tabel()
         else:
-            err_msg = getattr(self.model, "last_error", "")
-            pesan = f"Terjadi kesalahan saat menyimpan data ke database:\n{err_msg}" if err_msg else "Terjadi kesalahan saat menyimpan data ke database."
-            messagebox.showerror("Error", pesan)
+            messagebox.showerror("Error", "Gagal menyimpan data.")
 
-    # Fungsi untuk menyalakan aplikasi
     def run(self):
         self.view.mainloop()
