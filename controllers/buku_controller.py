@@ -63,7 +63,9 @@ class BukuController:
             # Muat ulang tabel agar data terbaru muncul
             self.muat_data_tabel()
         else:
-            messagebox.showerror("Error", "Terjadi kesalahan saat menyimpan data ke database.")
+            err_msg = getattr(self.model, "last_error", "")
+            pesan = f"Terjadi kesalahan saat menyimpan data ke database:\n{err_msg}" if err_msg else "Terjadi kesalahan saat menyimpan data ke database."
+            messagebox.showerror("Error", pesan)
 
     # Fungsi untuk menyalakan aplikasi
     def run(self):
